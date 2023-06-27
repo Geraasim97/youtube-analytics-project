@@ -1,10 +1,7 @@
-import requests
-import os
 import json
+import os
 from googleapiclient.discovery import build
 
-api_key = "AIzaSyBSduYPmnqebyvrcoCz9IW40GNZbc18KJk"
-youtube = build('youtube', 'v3', developerKey=api_key)
 
 class Channel:
     """Класс для ютуб-канала"""
@@ -12,75 +9,48 @@ class Channel:
     def __init__(self, channel_id: str) -> None:
         """Экземпляр инициализируется id канала. Дальше все данные будут подтягиваться по API."""
         self.__channel_id = channel_id
-        self.__channel=(self.__channel_id)
-        self.__description = self.__channel['items'][0]['snippet']['description']
-        self.__title=self.__channel['items'][0]['snippet']['title']
-        self.__url=f'https://www.youtube.com/channel/{self.__channel_id}'
-        self.__subscribers_count = int(self.__channel['items'][0]['statistics']['subscriberCount'])
-        self.__video_count = int(self.__channel['items'][0]['statistics']['videoCount'])
-        self.__views_count =int(self.__channel['items'][0]['statistics']['viewsCount'])
+
+        youtube = Channel.get_service()
+        result = youtube.channels().list(id=self.__channel_id, part="snippet, statistics").execute()
+
+        self.title = result["items"][0]["snippet"]["title"]
+        self.description = result["items"][0]["snippet"]["description"].split(":)")[0]
+        self.url = f"https://www.youtube.com/channel/{self.__channel_id}"
+        self.video_count = result["items"][0]["statistics"]["videoCount"]
+        self.view_count = result["items"][0]["statistics"]["viewCount"]
+        self.subscriber_count = result["items"][0]["statistics"]["subscriberCount"]
 
     def print_info(self) -> None:
         """Выводит в консоль информацию о канале."""
-        channel = youtube.channels().list(id=self.channel_id, part='snippet,statistics').execute()
-        return channel
 
-    "Возвращает название канала"
-    @property
-    def title(self):
-        return self.__title
+        api_key_my_youtube: str = os.getenv('YT-API-KEY')
 
-    "Возвращает описание канала"
-    @property
-    def description(self):
-        return self.__description
+        youtube = build('youtube', 'v3', developerKey=api_key_my_youtube)
 
-    "Возвращает ссылку на канал канала"
-    @property
-    def url(self):
-        return self.__url
+        result = youtube.channels().list(id=self.__channel_id, part="snippet, statistics").execute()
 
-    "Возвращает кол-во подписчиков канала"
-    @property
-    def subscribers_count(self):
-        return self.__subscribers_count
+        result = json.dumps(result, indent=2, ensure_ascii=False)
 
-    "Возвращает кол-во видео на канале"
-    @property
-    def video_count(self):
-        return self.__video_count
+        print(result)
 
-    "Возвращает кол-во просмотров"
-    @property
-    def views_count(self):
-        return self.__views_count
+    @classmethod
+    def get_service(cls):
+        api_key_my_youtube: str = os.getenv('YT-API-KEY')
+        return build('youtube', 'v3', developerKey=api_key_my_youtube)
 
-    " Геттер Возвращает id канала"
+    def to_json(self, name_of_file):
+        self_to_out = {
+            "__channel_id": self.__channel_id,
+            "title": self.title,
+            "description": self.description,
+            "url": self.url,
+            "video_count": self.video_count,
+            "view_count": self.view_count,
+            "subscriber_count": self.subscriber_count
+        }
+        with open(name_of_file, "w", encoding="utf-8") as outfile:
+            json.dump(self_to_out, outfile)
+
     @property
     def channel_id(self):
         return self.__channel_id
-
-    " Сеттер Возвращает id канала"
-    @channel_id.setter
-    def channel_id(self, id):
-        print("AttributeError: property 'channel_id' of 'Channel' object has no setter")
-
-    "Класс-метод возвращает объект для работы с Youtube API"
-    @classmethod
-    def get_service(cls):
-        return cls.__channel
-
-    def to_json(self, filename) -> None:
-        "Метод возвращает в json значения атрибутов экземпляра Channel"
-        data = {
-            'channel_id': self.__channel_id,
-            'title': self.__title,
-            'description': self.__description,
-            'url': self.__url,
-            'subscribers_count': self.__subscribers_count,
-            'video_count': self.__video_count,
-            'views_count': self.__views_count
-        }
-        with open(filename, 'w') as file:
-            json.dump(data, file, indent=4)
-
